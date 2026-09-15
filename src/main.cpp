@@ -1,0 +1,319 @@
+#include<iostream>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<unistd.h>
+#include<cerrno>
+#include<cstdio>
+#include<string>
+#include<sstream>
+#include<wrap.h>
+#include<fstream>
+#include<fcntl.h>
+#include<sys/epoll.h>
+#define PORT 9527
+using namespace std;
+#define Max_event 1024
+
+struct epoll
+{
+    
+int fd;
+string send_buf;
+string recv_buf;
+void(*callback)(int fd,uint32_t event,struct epoll* arg);
+struct epoll* arg;
+size_t total;
+int status;
+};
+ epoll g_event[Max_event+1];
+int epfd;
+void acception(int fd,uint32_t event,struct epoll *ev);
+void hander_client(int cfd,uint32_t event,struct epoll *ev);
+void send_client(int cfd,uint32_t event,struct epoll *ev);
+void eventdel(struct epoll* ev);
+
+bool set_nonblock(int fd)
+{
+    int flags=fcntl(fd,F_GETFL,0);
+    return flags!=-1 && fcntl(fd,F_SETFL,flags|O_NONBLOCK)!=-1;
+}
+void eventset(int fd,struct epoll *ev,void(*callback)(int ,uint32_t ,struct epoll*),struct epoll* arg)
+{
+ev->fd=fd;
+ev->arg=arg;
+ev->callback=callback;
+ev->status=0;
+ev->recv_buf.clear();
+ev->send_buf.clear();
+ev->total=0;
+}
+
+void eventadd(uint32_t event,int fd,struct epoll *ev)
+{
+    struct epoll_event epv{};
+    epv.events=event;
+    epv.data.ptr=ev;
+
+    // 已经注册的连接，切换读写事件时使用 MOD。
+    int op=ev->status==0 ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
+    if(epoll_ctl(epfd,op,fd,&epv)==-1)
+    {
+        perror("epoll_ctl error");
+        eventdel(ev);
+        return;
+    }
+    ev->status=1;
+}
+
+void Initserver()
+{
+
+    int fd=Socket(AF_INET,SOCK_STREAM,0);
+    int opt=1;
+    setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));
+    sockaddr_in addr{};
+    addr.sin_family=AF_INET;
+    addr.sin_port=htons(PORT);
+    addr.sin_addr.s_addr=htonl(INADDR_ANY);
+    Bind(fd,(struct sockaddr*)&addr,sizeof(addr));
+    Listen(fd,128);
+    if(!set_nonblock(fd))
+    {
+        perror("fcntl error");
+        close(fd);
+        exit(1);
+    }
+    
+eventset(fd,&g_event[Max_event],acception,&g_event[Max_event]);
+eventadd(EPOLLIN,fd,&g_event[Max_event]);
+
+}
+void acception(int fd,uint32_t,struct epoll *)
+{
+    struct sockaddr_in clin_addr{};
+    socklen_t len=sizeof(clin_addr);
+    // 非阻塞 accept 的 EAGAIN 不是致命错误。
+    int cfd=accept(fd,(struct sockaddr*)&clin_addr,&len);
+    if(cfd==-1)
+    {
+        if(errno!=EINTR && errno!=EAGAIN && errno!=EWOULDBLOCK)
+            perror("accept error");
+        return;
+    }
+
+    int i;
+    for(i=0;i<Max_event;i++)
+    {
+        if(g_event[i].status==0)
+            break;
+    }
+    if(i==Max_event)
+    {
+        cout<<"too many client"<<endl;
+        close(cfd);
+        return;
+    }
+    if(!set_nonblock(cfd))
+    {
+        perror("fcntl error");
+        close(cfd);
+        return;
+    }
+    eventset(cfd,&g_event[i],hander_client,&g_event[i]);
+    eventadd(EPOLLIN,cfd,&g_event[i]);
+}
+void eventdel(struct epoll* ev)
+
+{
+   epoll_ctl(epfd,EPOLL_CTL_DEL,ev->fd,NULL);
+   ev->arg=NULL;
+   ev->callback=NULL;
+   ev->recv_buf.clear();
+   ev->send_buf.clear();
+   ev->status=0;
+   close(ev->fd);
+   ev->fd=-1;
+   cout<<"client close"<<endl;
+}
+
+void hander_client(int cfd,uint32_t,struct epoll* ev)
+{
+
+        char buf[BUFSIZ];
+        // 保留未收完整的请求，下次回调继续拼接。
+        string& message=ev->recv_buf;
+
+        // 一次 read 不一定收到完整请求，先把数据拼起来。
+        while(message.find("\r\n\r\n")==string::npos)
+        {
+            ssize_t n=read(cfd,buf,sizeof(buf));
+            if(n==0)
+            {
+                eventdel(ev);
+                return;
+            }
+            if(n==-1)
+            {
+                if(errno==EINTR)
+                    continue;
+                if(errno==EAGAIN || errno==EWOULDBLOCK)
+                    return;
+                perror("read error");
+                eventdel(ev);
+                return;
+            }
+            message.append(buf,(size_t)n);
+
+            // 当前只处理小请求头，避免一直占用内存。
+            if(message.size()>16*1024)
+            {
+                eventdel(ev);
+                return;
+            }
+        }
+
+        
+
+        // 只取第一行，例如：GET / HTTP/1.1
+        stringstream ss(message.substr(0,message.find("\r\n")));
+        string method;
+        string path;
+        string version;
+        string extra;
+        string status;
+        string body;
+
+        if(!(ss>>method>>path>>version) || (ss>>extra))
+        {
+            status="400 Bad Request";
+            body="<h1>Bad Request</h1>";
+        }
+        else if(method!="GET")
+        {
+            status="405 Method Not Allowed";
+            body="<h1>Method Not Allowed</h1>";
+        }
+        else if(path=="/"||path=="/index.html")
+        {
+            int filefd=open("/home/lyf67/Webserver/www/index.html",O_RDONLY);
+            if(filefd==-1)
+            {
+                status="404 Not Found";
+                body="<h1>Not Found</h1>";
+            
+            }
+            else{
+
+                status="200 OK";
+                char filebuf[BUFSIZ];
+                while(1)
+                {
+                    ssize_t n=read(filefd,filebuf,sizeof(filebuf));
+                    if(n==-1)
+                    {
+                        if(errno==EINTR)
+                        continue;
+                        status="500 Internal Server Error";
+                        body="<h1>Read File Error</h1>";
+                        break;
+                    }
+                    else if(n==0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        body.append(filebuf,(size_t)n);
+                    }
+                }
+                close(filefd);
+            }
+        }
+        else{
+            status="404 Not Found";
+            body="<h1>Not Found</h1>";
+        }
+
+        // 各分支只决定状态码和内容，响应统一拼接、发送。
+        string response="HTTP/1.1 "+status+"\r\n";
+        response+="Content-Type: text/html; charset=utf-8\r\n";
+        response+="Content-Length: "+to_string(body.size())+"\r\n";
+        if(status=="405 Method Not Allowed")
+            response+="Allow: GET\r\n";
+        response+="Connection: close\r\n";
+        response+="\r\n";
+        response+=body;
+
+        ev->send_buf=response;
+        ev->total=0;
+        ev->callback=send_client;
+        eventadd(EPOLLOUT,cfd,ev);
+}
+
+void send_client(int cfd,uint32_t,struct epoll* ev)
+{
+    while(ev->total<ev->send_buf.size())
+    {
+        ssize_t ret=send(cfd,ev->send_buf.data()+ev->total,
+                         ev->send_buf.size()-ev->total,MSG_NOSIGNAL);
+        if(ret==-1)
+        {
+            if(errno==EINTR)
+                continue;
+            // 暂时发不出去，等下一次 EPOLLOUT，继续从 total 发送。
+            if(errno==EAGAIN || errno==EWOULDBLOCK)
+                return;
+            perror("send error");
+            eventdel(ev);
+            return;
+        }
+        if(ret==0)
+        {
+            eventdel(ev);
+            return;
+        }
+        ev->total+=(size_t)ret;
+    }
+    eventdel(ev);
+}
+
+
+
+
+int main()
+{
+    cout<<"WebServer starting..."<<endl;
+    struct epoll_event events[Max_event];
+    epfd=Epoll_create1(0);
+    Initserver();
+    while(1)
+    {
+        int ret=epoll_wait(epfd,events,Max_event,-1);
+        if(ret==-1)
+        {
+            if(errno==EINTR)
+                continue;
+            perror("epoll_wait error");
+            break;
+        }
+for(int i=0;i<ret;i++)
+{
+    struct epoll *ev=(struct epoll*)events[i].data.ptr;
+    if(events[i].events&(EPOLLERR|EPOLLHUP))
+    {
+        eventdel(ev);
+        continue;
+    }
+    if(ev->status==1 && ev->callback)
+        ev->callback(ev->fd,events[i].events,ev->arg);
+}
+        }
+        
+    for(int i=0;i<=Max_event;i++)
+    {
+        if(g_event[i].status==1)
+            eventdel(&g_event[i]);
+    }
+    close(epfd);
+    return 0;
+}
