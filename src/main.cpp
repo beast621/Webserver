@@ -10,6 +10,7 @@
 #include<fstream>
 #include<fcntl.h>
 #include<sys/epoll.h>
+#include<chrono>
 #define PORT 9527
 using namespace std;
 #define Max_event 1024
@@ -24,6 +25,8 @@ void(*callback)(int fd,uint32_t event,struct epoll* arg);
 struct epoll* arg;
 size_t total;
 int status;
+chrono::steady_clock::time_point last_active;
+chrono::steady_clock::time_point start_time;
 };
  epoll g_event[Max_event+1];
 int epfd;
@@ -46,12 +49,14 @@ ev->status=0;
 ev->recv_buf.clear();
 ev->send_buf.clear();
 ev->total=0;
+ev->last_active=chrono::steady_clock::now();
+ev->start_time=chrono::steady_clock::now();
 }
 
 void eventadd(uint32_t event,int fd,struct epoll *ev)
 {
     struct epoll_event epv{};
-    epv.events=event;
+    epv.events=event | EPOLLET;
     epv.data.ptr=ev;
 
     // 已经注册的连接，切换读写事件时使用 MOD。
@@ -91,11 +96,21 @@ eventadd(EPOLLIN,fd,&g_event[Max_event]);
 void acception(int fd,uint32_t,struct epoll *)
 {
     struct sockaddr_in clin_addr{};
+    while(1)
+    {
     socklen_t len=sizeof(clin_addr);
     // 非阻塞 accept 的 EAGAIN 不是致命错误。
     int cfd=accept(fd,(struct sockaddr*)&clin_addr,&len);
     if(cfd==-1)
     {
+        if(errno==EINTR)
+        {
+            continue;
+        }
+        else if(errno==EAGAIN||errno==EWOULDBLOCK)
+        {
+            return;
+        }
         if(errno!=EINTR && errno!=EAGAIN && errno!=EWOULDBLOCK)
             perror("accept error");
         return;
@@ -111,16 +126,18 @@ void acception(int fd,uint32_t,struct epoll *)
     {
         cout<<"too many client"<<endl;
         close(cfd);
-        return;
+        continue;
     }
     if(!set_nonblock(cfd))
     {
         perror("fcntl error");
         close(cfd);
-        return;
+        continue;
     }
     eventset(cfd,&g_event[i],hander_client,&g_event[i]);
     eventadd(EPOLLIN,cfd,&g_event[i]);
+    cout<<"connect success"<<endl;
+}
 }
 void eventdel(struct epoll* ev)
 
@@ -163,6 +180,8 @@ void hander_client(int cfd,uint32_t,struct epoll* ev)
                 return;
             }
             message.append(buf,(size_t)n);
+ev->last_active=chrono::steady_clock::now();
+
 
             // 当前只处理小请求头，避免一直占用内存。
             if(message.size()>16*1024)
@@ -182,7 +201,7 @@ void hander_client(int cfd,uint32_t,struct epoll* ev)
         string extra;
         string status;
         string body;
-
+string content_type="text/html; charset=utf-8";
         if(!(ss>>method>>path>>version) || (ss>>extra))
         {
             status="400 Bad Request";
@@ -273,6 +292,9 @@ void send_client(int cfd,uint32_t,struct epoll* ev)
             return;
         }
         ev->total+=(size_t)ret;
+        ev->last_active=chrono::steady_clock::now();
+
+
     }
     eventdel(ev);
 }
@@ -288,7 +310,7 @@ int main()
     Initserver();
     while(1)
     {
-        int ret=epoll_wait(epfd,events,Max_event,-1);
+        int ret=epoll_wait(epfd,events,Max_event,1000);
         if(ret==-1)
         {
             if(errno==EINTR)
@@ -307,13 +329,51 @@ for(int i=0;i<ret;i++)
     if(ev->status==1 && ev->callback)
         ev->callback(ev->fd,events[i].events,ev->arg);
 }
+auto now=chrono::steady_clock::now();
+for(int i=0;i<Max_event;i++)
+{
+    if(g_event[i].status==0)
+    continue;
+
+if(g_event[i].callback==hander_client)
+{
+    auto esp=now-g_event[i].start_time;
+    if(esp>=chrono::seconds(10))
+{
+    cout<<"request timeout"<<endl;
+
+    struct epoll* ev=&g_event[i];
+    string body="<h1>408 Request Timeout</h1>";
+
+    ev->send_buf="HTTP/1.1 408 Request Timeout\r\n";
+    ev->send_buf+="Content-Type: text/html; charset=utf-8\r\n";
+    ev->send_buf+="Content-Length: "+to_string(body.size())+"\r\n";
+    ev->send_buf+="Connection: close\r\n";
+    ev->send_buf+="\r\n";
+    ev->send_buf+=body;
+
+    ev->total=0;
+    ev->callback=send_client;
+    eventadd(EPOLLOUT,ev->fd,ev);
+
+    continue;
+}
+}
+
+auto idle=now-g_event[i].last_active;
+//auto esp=now-g_event[i].last_active;
+//auto seconds=chrono::duration_cast<chrono::seconds>(esp).count();
+
+if(idle>chrono::seconds(30))
+{
+    cout<<"client timeout"<<endl;
+    eventdel(&g_event[i]);
+}
+
+}
+
         }
         
-    for(int i=0;i<=Max_event;i++)
-    {
-        if(g_event[i].status==1)
-            eventdel(&g_event[i]);
-    }
-    close(epfd);
+    
     return 0;
 }

@@ -244,4 +244,33 @@ CMakeFiles/server.dir/src/main.cpp.o: /home/lyf67/Webserver/src/main.cpp \
  /usr/include/c++/15/bits/codecvt.h \
  /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
- /usr/include/c++/15/bits/fstream.tcc
+ /usr/include/c++/15/bits/fstream.tcc /usr/include/c++/15/chrono \
+ /usr/include/c++/15/vector /usr/include/c++/15/bits/stl_uninitialized.h \
+ /usr/include/c++/15/bits/stl_vector.h \
+ /usr/include/c++/15/bits/stl_bvector.h \
+ /usr/include/c++/15/bits/vector.tcc /usr/include/c++/15/bits/stl_algo.h \
+ /usr/include/c++/15/bits/algorithmfwd.h \
+ /usr/include/c++/15/bits/stl_heap.h \
+ /usr/include/c++/15/bits/uniform_int_dist.h \
+ /usr/include/c++/15/bits/stl_tempbuf.h \
+ /usr/include/c++/15/bits/shared_ptr.h \
+ /usr/include/c++/15/bits/shared_ptr_base.h \
+ /usr/include/c++/15/bits/allocated_ptr.h \
+ /usr/include/c++/15/ext/aligned_buffer.h \
+ /usr/include/c++/15/ext/concurrence.h /usr/include/c++/15/bits/align.h \
+ /usr/include/c++/15/bits/chrono_io.h /usr/include/c++/15/iomanip \
+ /usr/include/c++/15/locale \
+ /usr/include/c++/15/bits/locale_facets_nonio.h \
+ /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
+ /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+ /usr/include/libintl.h /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+ /usr/include/c++/15/bits/locale_conv.h \
+ /usr/include/c++/15/bits/quoted_string.h /usr/include/c++/15/format \
+ /usr/include/c++/15/array /usr/include/c++/15/charconv \
+ /usr/include/c++/15/optional \
+ /usr/include/c++/15/bits/enable_special_members.h \
+ /usr/include/c++/15/span /usr/include/c++/15/bits/monostate.h \
+ /usr/include/c++/15/bits/formatfwd.h \
+ /usr/include/c++/15/bits/ranges_algobase.h \
+ /usr/include/c++/15/bits/unicode.h \
+ /usr/include/c++/15/bits/unicode-data.h
