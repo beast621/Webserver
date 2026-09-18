@@ -10,10 +10,16 @@
 #include<fstream>
 #include<fcntl.h>
 #include<sys/epoll.h>
+#include<cstring>
+#include<map>
+#include"http.h"
+#include<sys/stat.h>
 #include<chrono>
-#define PORT 9527
+
 using namespace std;
 #define Max_event 1024
+int port=9527;
+string root ="/home/lyf67/Webserver/www";
 
 struct epoll
 {
@@ -153,6 +159,14 @@ void eventdel(struct epoll* ev)
    cout<<"client close"<<endl;
 }
 
+
+
+
+
+
+
+
+
 void hander_client(int cfd,uint32_t,struct epoll* ev)
 {
 
@@ -184,11 +198,16 @@ ev->last_active=chrono::steady_clock::now();
 
 
             // 当前只处理小请求头，避免一直占用内存。
-            if(message.size()>16*1024)
-            {
-                eventdel(ev);
-                return;
-            }
+          
+size_t end=message.find("\r\n\r\n");
+if((end==string::npos&&message.size()>16*1024)||
+(end!=string::npos&&end+4>16*1024))
+{
+    eventdel(ev);
+    return;
+}
+
+
         }
 
         
@@ -201,69 +220,253 @@ ev->last_active=chrono::steady_clock::now();
         string extra;
         string status;
         string body;
+        string quary;
 string content_type="text/html; charset=utf-8";
+bool valid=true;
+map<string,string>headers;
         if(!(ss>>method>>path>>version) || (ss>>extra))
         {
-            status="400 Bad Request";
-            body="<h1>Bad Request</h1>";
+            valid=false;
         }
-        else if(method!="GET")
+
+        if(valid)
+        {
+
+            if(path.empty()||path[0]!='/')
+            {
+                valid=false;
+            }
+
+            if(version!="HTTP/1.0"&&version!="HTTP/1.1")
+            {
+                valid=false;
+            }
+        }
+
+        if(valid)
+        {
+            size_t pos=path.find('?');
+            if(pos!=string::npos)
+            {
+                quary=path.substr(pos+1);
+                path=path.substr(0,pos);
+
+
+            }
+
+        }
+        if(valid)
+        {
+
+            valid=parse_headers(message,headers);
+
+        }
+
+if(valid&&version=="HTTP/1.1")
+{
+auto it=headers.find("host");
+if(it==headers.end() || it->second.empty())
+valid=false;
+
+}
+if(valid)                                                  
+{
+for( const auto& it:headers)
+{
+    cout<<it.first<<": "<<it.second<<endl;
+}
+}
+
+
+if(!valid)
+{
+    status="400 Bad Request";
+    body="<h1>Bad Request</h1>";
+    
+}
+
+
+else if(path=="/echo")
+{
+if(method!="POST")
+{
+
+    status="405 Method Not Allowed";
+    body="<h1>Method Not Allowed</h1>";
+
+}
+
+else if(headers.count("transfer-encoding"))
+    {
+        // 这一步只支持 Content-Length，不支持 chunked。
+        status=headers.count("content-length")
+               ? "400 Bad Request" : "501 Not Implemented";
+        body="<h1>Unsupported Request Framing</h1>";
+    }
+    else if(headers.count("expect"))
+    {
+        // 暂时不实现 100 Continue，直接给出最终响应。
+        status="417 Expectation Failed";
+        body="<h1>Expectation Failed</h1>";
+    }
+
+else if(!headers.count("content-length"))
+{
+
+    status="411 Length Required";
+    body="<h1>Length Required</h1>";
+
+}
+
+else
+{
+
+    size_t content_length=0;
+    int result=parse_content_length(
+        headers["content-length"],
+        content_length
+    );
+    
+
+    if(result==400)
+    {
+
+        status="400 Bad Request";
+        body="<h1>Invalid Content-Length</h1>";
+
+    }
+
+    
+else if(result==413)
+{
+    status="413 Content Too Large";
+        body="<h1>Content Too Large</h1>";
+}
+
+
+if(status.empty())
+{
+size_t body_start=message.find("\r\n\r\n")+4;
+size_t request_size=body_start+content_length;
+
+while(message.size()<request_size)
+{
+
+size_t need=request_size-message.size();
+size_t count=need<sizeof(buf) ? need : sizeof(buf);
+ssize_t n=recv(cfd,buf,count,0);
+if(n==0)
+{
+    eventdel(ev);
+    return;
+
+}
+
+else if(n<0)
+{
+    if(errno==EINTR)
+    continue;
+
+    else if(errno==EAGAIN||errno==EWOULDBLOCK)
+    {
+        
+        return;
+    }
+else{
+    perror("read body error");
+    eventdel(ev);
+    return;
+}
+
+}
+
+else 
+{
+    message.append(buf,(size_t)n);
+    ev->last_active=chrono::steady_clock::now();
+
+}
+
+}
+status="200 OK";
+body=message.substr(body_start,content_length);
+content_type="text/plain; charset=utf-8";
+}
+
+}
+
+}
+
+
+        else if(method!="GET"&&method!="HEAD")
         {
             status="405 Method Not Allowed";
             body="<h1>Method Not Allowed</h1>";
         }
-        else if(path=="/"||path=="/index.html")
+        else
         {
-            int filefd=open("/home/lyf67/Webserver/www/index.html",O_RDONLY);
-            if(filefd==-1)
+            string filename;
+            string filetype;
+if(path=="/"||path=="/index.html")
+{
+filename="/home/lyf67/Webserver/www/index.html";
+filetype="text/html; charset=utf-8";
+}
+else if(path=="/style.css")
+{
+    filename="/home/lyf67/Webserver/www/style.css";
+    filetype="text/css; charset=utf-8";
+}
+
+
+if(filename.empty())
+{
+    status="404 Not Found";
+    body="<h1>Not Found</h1>";
+}
+else
+{
+    int filefd=open(filename.c_str(),O_RDONLY);
+    if(filefd==-1)
+    {
+        status="404 Not Found";
+    body="<h1>Not Found</h1>";
+    }
+
+    else{
+        status="200 OK";
+        char filebuf[BUFSIZ];
+        while(1)
+        {
+
+            ssize_t filen=read(filefd,filebuf,sizeof(filebuf));
+            if(filen>0)
             {
-                status="404 Not Found";
-                body="<h1>Not Found</h1>";
-            
+                body.append(filebuf,(size_t)filen);
+            }
+            else if(filen<0)
+            {
+if(errno==EINTR)
+continue;
+status="500 Internal Server Error";
+body="<h1>Read File Error</h1>";
+break;
+
             }
             else{
-
-                status="200 OK";
-                char filebuf[BUFSIZ];
-                while(1)
-                {
-                    ssize_t n=read(filefd,filebuf,sizeof(filebuf));
-                    if(n==-1)
-                    {
-                        if(errno==EINTR)
-                        continue;
-                        status="500 Internal Server Error";
-                        body="<h1>Read File Error</h1>";
-                        break;
-                    }
-                    else if(n==0)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        body.append(filebuf,(size_t)n);
-                    }
-                }
-                close(filefd);
+break;
             }
         }
-        else{
-            status="404 Not Found";
-            body="<h1>Not Found</h1>";
+        close(filefd);
+    }
+}
+if(status=="200 OK")
+content_type=filetype;
         }
+        
+            string allow=path=="/echo"?"POST":"GET,HEAD";
+      ev->send_buf=make_response(status,body,content_type,method=="HEAD",allow);
 
-        // 各分支只决定状态码和内容，响应统一拼接、发送。
-        string response="HTTP/1.1 "+status+"\r\n";
-        response+="Content-Type: text/html; charset=utf-8\r\n";
-        response+="Content-Length: "+to_string(body.size())+"\r\n";
-        if(status=="405 Method Not Allowed")
-            response+="Allow: GET\r\n";
-        response+="Connection: close\r\n";
-        response+="\r\n";
-        response+=body;
-
-        ev->send_buf=response;
         ev->total=0;
         ev->callback=send_client;
         eventadd(EPOLLOUT,cfd,ev);
@@ -299,12 +502,26 @@ void send_client(int cfd,uint32_t,struct epoll* ev)
     eventdel(ev);
 }
 
-
-
-
-int main()
+bool parse_args(int argc,char* argv[])
 {
+
+    if(argc>3)
+    return false;
+
+    
+}
+
+
+int main(int argc,char* argv[])
+
+{
+if(!parse_args(argc,argv))
+return 1;
+
+
     cout<<"WebServer starting..."<<endl;
+    cout<<"port: "<<port<<endl;
+    cout<<"root: "<<root<<endl;
     struct epoll_event events[Max_event];
     epfd=Epoll_create1(0);
     Initserver();
@@ -345,13 +562,12 @@ if(g_event[i].callback==hander_client)
     struct epoll* ev=&g_event[i];
     string body="<h1>408 Request Timeout</h1>";
 
-    ev->send_buf="HTTP/1.1 408 Request Timeout\r\n";
-    ev->send_buf+="Content-Type: text/html; charset=utf-8\r\n";
-    ev->send_buf+="Content-Length: "+to_string(body.size())+"\r\n";
-    ev->send_buf+="Connection: close\r\n";
-    ev->send_buf+="\r\n";
-    ev->send_buf+=body;
-
+    ev->send_buf=make_response(
+        "408 Request Timeout",
+        body,
+        "text/html; charset=utf-8"
+    );
+    
     ev->total=0;
     ev->callback=send_client;
     eventadd(EPOLLOUT,ev->fd,ev);

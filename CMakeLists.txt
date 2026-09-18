@@ -13,3 +13,17 @@ target_compile_options(server PRIVATE -Wall
 -Wconversion
 -Wsign-conversion
 )
+
+enable_testing()
+add_executable(http_test tests/http_test.cpp src/http.cpp)
+
+target_include_directories(http_test PRIVATE ${PROJECT_SOURCE_DIR}/include)
+
+target_compile_options(http_test PRIVATE -Wall
+-Wextra
+-Wpedantic
+-Wconversion
+-Wsign-conversion
+)
+
+add_test(NAME http_test COMMAND http_test)
