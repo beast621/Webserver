@@ -1,0 +1,38 @@
+Start testing: Sep 18 16:09 CST
+----------------------------------------------------------
+1/1 Testing: http_test
+1/1 Test: http_test
+Command: "/home/lyf67/Webserver/build/http_test"
+Directory: /home/lyf67/Webserver/build
+"http_test" start time: Sep 18 16:09 CST
+Output:
+----------------------------------------------------------
+pass: trim spaces
+pass: trim empty
+pass: parse headers
+pass: header name lowercase
+pass: header value
+pass: reject missing colon
+pass: reject duplicate header
+pass: length normal
+pass: length zero
+pass: reject empty length
+pass: reject negative length
+pass: reject invalid length
+pass: length at limit
+pass: reject oversized length
+pass: response length
+pass: response body
+pass: HEAD length
+pass: HEAD has no body
+pass: 405 allowed methods
+failed: 0
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"http_test" end time: Sep 18 16:09 CST
+"http_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 18 16:09 CST

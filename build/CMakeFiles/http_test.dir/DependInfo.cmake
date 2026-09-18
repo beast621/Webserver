@@ -8,10 +8,9 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/lyf67/Webserver/src/http.cpp" "CMakeFiles/server.dir/src/http.cpp.o" "gcc" "CMakeFiles/server.dir/src/http.cpp.o.d"
-  "/home/lyf67/Webserver/src/main.cpp" "CMakeFiles/server.dir/src/main.cpp.o" "gcc" "CMakeFiles/server.dir/src/main.cpp.o.d"
-  "/home/lyf67/Webserver/src/wrap.cpp" "CMakeFiles/server.dir/src/wrap.cpp.o" "gcc" "CMakeFiles/server.dir/src/wrap.cpp.o.d"
-  "" "server" "gcc" "CMakeFiles/server.dir/link.d"
+  "/home/lyf67/Webserver/src/http.cpp" "CMakeFiles/http_test.dir/src/http.cpp.o" "gcc" "CMakeFiles/http_test.dir/src/http.cpp.o.d"
+  "/home/lyf67/Webserver/tests/http_test.cpp" "CMakeFiles/http_test.dir/tests/http_test.cpp.o" "gcc" "CMakeFiles/http_test.dir/tests/http_test.cpp.o.d"
+  "" "http_test" "gcc" "CMakeFiles/http_test.dir/link.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

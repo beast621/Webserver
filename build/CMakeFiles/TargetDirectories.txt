@@ -1,3 +1,5 @@
 /home/lyf67/Webserver/build/CMakeFiles/server.dir
+/home/lyf67/Webserver/build/CMakeFiles/http_test.dir
+/home/lyf67/Webserver/build/CMakeFiles/test.dir
 /home/lyf67/Webserver/build/CMakeFiles/edit_cache.dir
 /home/lyf67/Webserver/build/CMakeFiles/rebuild_cache.dir

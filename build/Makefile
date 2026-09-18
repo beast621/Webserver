@@ -65,6 +65,16 @@ CMAKE_BINARY_DIR = /home/lyf67/Webserver/build
 #=============================================================================
 # Targets provided globally by CMake.
 
+# Special rule for the target test
+test:
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Running tests..."
+	/usr/bin/ctest $(ARGS)
+.PHONY : test
+
+# Special rule for the target test
+test/fast: test
+.PHONY : test/fast
+
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "No interactive CMake dialog available..."
@@ -129,6 +139,46 @@ server/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/build
 .PHONY : server/fast
 
+#=============================================================================
+# Target rules for targets named http_test
+
+# Build rule for target.
+http_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 http_test
+.PHONY : http_test
+
+# fast build rule for target.
+http_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/http_test.dir/build.make CMakeFiles/http_test.dir/build
+.PHONY : http_test/fast
+
+src/http.o: src/http.cpp.o
+.PHONY : src/http.o
+
+# target to build an object file
+src/http.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/src/http.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/http_test.dir/build.make CMakeFiles/http_test.dir/src/http.cpp.o
+.PHONY : src/http.cpp.o
+
+src/http.i: src/http.cpp.i
+.PHONY : src/http.i
+
+# target to preprocess a source file
+src/http.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/src/http.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/http_test.dir/build.make CMakeFiles/http_test.dir/src/http.cpp.i
+.PHONY : src/http.cpp.i
+
+src/http.s: src/http.cpp.s
+.PHONY : src/http.s
+
+# target to generate assembly for a file
+src/http.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/src/http.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/http_test.dir/build.make CMakeFiles/http_test.dir/src/http.cpp.s
+.PHONY : src/http.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -177,6 +227,30 @@ src/wrap.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/src/wrap.cpp.s
 .PHONY : src/wrap.cpp.s
 
+tests/http_test.o: tests/http_test.cpp.o
+.PHONY : tests/http_test.o
+
+# target to build an object file
+tests/http_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/http_test.dir/build.make CMakeFiles/http_test.dir/tests/http_test.cpp.o
+.PHONY : tests/http_test.cpp.o
+
+tests/http_test.i: tests/http_test.cpp.i
+.PHONY : tests/http_test.i
+
+# target to preprocess a source file
+tests/http_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/http_test.dir/build.make CMakeFiles/http_test.dir/tests/http_test.cpp.i
+.PHONY : tests/http_test.cpp.i
+
+tests/http_test.s: tests/http_test.cpp.s
+.PHONY : tests/http_test.s
+
+# target to generate assembly for a file
+tests/http_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/http_test.dir/build.make CMakeFiles/http_test.dir/tests/http_test.cpp.s
+.PHONY : tests/http_test.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -185,13 +259,21 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... test"
+	@echo "... http_test"
 	@echo "... server"
+	@echo "... src/http.o"
+	@echo "... src/http.i"
+	@echo "... src/http.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
 	@echo "... src/wrap.o"
 	@echo "... src/wrap.i"
 	@echo "... src/wrap.s"
+	@echo "... tests/http_test.o"
+	@echo "... tests/http_test.i"
+	@echo "... tests/http_test.s"
 .PHONY : help
 
 
