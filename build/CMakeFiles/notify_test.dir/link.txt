@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/notify_test.dir/link.d CMakeFiles/notify_test.dir/tests/notify_test.cpp.o -o notify_test

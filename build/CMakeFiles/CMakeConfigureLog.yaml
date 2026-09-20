@@ -2828,3 +2828,43 @@ events:
       Running the CXX compiler's linker: "/usr/bin/ld" "-v"
       GNU ld (GNU Binutils for Ubuntu) 2.46
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-4.2/Modules/Internal/CheckSourceCompiles.cmake:104 (try_compile)"
+      - "/usr/share/cmake-4.2/Modules/CheckCSourceCompiles.cmake:103 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-4.2/Modules/FindThreads.cmake:160 (check_c_source_compiles)"
+      - "/usr/share/cmake-4.2/Modules/FindThreads.cmake:226 (_threads_check_libc)"
+      - "CMakeLists.txt:31 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/home/lyf67/Webserver/build/CMakeFiles/CMakeScratch/TryCompile-71KApM"
+      binary: "/home/lyf67/Webserver/build/CMakeFiles/CMakeScratch/TryCompile-71KApM"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/home/lyf67/Webserver/build/CMakeFiles/CMakeScratch/TryCompile-71KApM'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_59e15/fast
+        gmake[1]: Entering directory '/home/lyf67/Webserver/build/CMakeFiles/CMakeScratch/TryCompile-71KApM'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_59e15.dir/build.make CMakeFiles/cmTC_59e15.dir/build
+        gmake[2]: Entering directory '/home/lyf67/Webserver/build/CMakeFiles/CMakeScratch/TryCompile-71KApM'
+        Building C object CMakeFiles/cmTC_59e15.dir/src.c.o
+        /usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_59e15.dir/src.c.o -c /home/lyf67/Webserver/build/CMakeFiles/CMakeScratch/TryCompile-71KApM/src.c
+        Linking C executable cmTC_59e15
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_59e15.dir/link.txt --verbose=1
+        /usr/bin/cc CMakeFiles/cmTC_59e15.dir/src.c.o -o cmTC_59e15
+        gmake[2]: Leaving directory '/home/lyf67/Webserver/build/CMakeFiles/CMakeScratch/TryCompile-71KApM'
+        gmake[1]: Leaving directory '/home/lyf67/Webserver/build/CMakeFiles/CMakeScratch/TryCompile-71KApM'
+        
+      exitCode: 0
+...

@@ -152,6 +152,32 @@ http_test/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/http_test.dir/build.make CMakeFiles/http_test.dir/build
 .PHONY : http_test/fast
 
+#=============================================================================
+# Target rules for targets named thread_pool_test
+
+# Build rule for target.
+thread_pool_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 thread_pool_test
+.PHONY : thread_pool_test
+
+# fast build rule for target.
+thread_pool_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/thread_pool_test.dir/build.make CMakeFiles/thread_pool_test.dir/build
+.PHONY : thread_pool_test/fast
+
+#=============================================================================
+# Target rules for targets named notify_test
+
+# Build rule for target.
+notify_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 notify_test
+.PHONY : notify_test
+
+# fast build rule for target.
+notify_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/notify_test.dir/build.make CMakeFiles/notify_test.dir/build
+.PHONY : notify_test/fast
+
 src/http.o: src/http.cpp.o
 .PHONY : src/http.o
 
@@ -251,6 +277,54 @@ tests/http_test.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/http_test.dir/build.make CMakeFiles/http_test.dir/tests/http_test.cpp.s
 .PHONY : tests/http_test.cpp.s
 
+tests/notify_test.o: tests/notify_test.cpp.o
+.PHONY : tests/notify_test.o
+
+# target to build an object file
+tests/notify_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/notify_test.dir/build.make CMakeFiles/notify_test.dir/tests/notify_test.cpp.o
+.PHONY : tests/notify_test.cpp.o
+
+tests/notify_test.i: tests/notify_test.cpp.i
+.PHONY : tests/notify_test.i
+
+# target to preprocess a source file
+tests/notify_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/notify_test.dir/build.make CMakeFiles/notify_test.dir/tests/notify_test.cpp.i
+.PHONY : tests/notify_test.cpp.i
+
+tests/notify_test.s: tests/notify_test.cpp.s
+.PHONY : tests/notify_test.s
+
+# target to generate assembly for a file
+tests/notify_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/notify_test.dir/build.make CMakeFiles/notify_test.dir/tests/notify_test.cpp.s
+.PHONY : tests/notify_test.cpp.s
+
+tests/thread_pool_test.o: tests/thread_pool_test.cpp.o
+.PHONY : tests/thread_pool_test.o
+
+# target to build an object file
+tests/thread_pool_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/thread_pool_test.dir/build.make CMakeFiles/thread_pool_test.dir/tests/thread_pool_test.cpp.o
+.PHONY : tests/thread_pool_test.cpp.o
+
+tests/thread_pool_test.i: tests/thread_pool_test.cpp.i
+.PHONY : tests/thread_pool_test.i
+
+# target to preprocess a source file
+tests/thread_pool_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/thread_pool_test.dir/build.make CMakeFiles/thread_pool_test.dir/tests/thread_pool_test.cpp.i
+.PHONY : tests/thread_pool_test.cpp.i
+
+tests/thread_pool_test.s: tests/thread_pool_test.cpp.s
+.PHONY : tests/thread_pool_test.s
+
+# target to generate assembly for a file
+tests/thread_pool_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/thread_pool_test.dir/build.make CMakeFiles/thread_pool_test.dir/tests/thread_pool_test.cpp.s
+.PHONY : tests/thread_pool_test.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -261,7 +335,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test"
 	@echo "... http_test"
+	@echo "... notify_test"
 	@echo "... server"
+	@echo "... thread_pool_test"
 	@echo "... src/http.o"
 	@echo "... src/http.i"
 	@echo "... src/http.s"
@@ -274,6 +350,12 @@ help:
 	@echo "... tests/http_test.o"
 	@echo "... tests/http_test.i"
 	@echo "... tests/http_test.s"
+	@echo "... tests/notify_test.o"
+	@echo "... tests/notify_test.i"
+	@echo "... tests/notify_test.s"
+	@echo "... tests/thread_pool_test.o"
+	@echo "... tests/thread_pool_test.i"
+	@echo "... tests/thread_pool_test.s"
 .PHONY : help
 
 

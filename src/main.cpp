@@ -15,11 +15,22 @@
 #include"http.h"
 #include<sys/stat.h>
 #include<chrono>
-
+#include<signal.h>
+#include<ctime>
+#include<iomanip>
 using namespace std;
 #define Max_event 1024
 int port=9527;
 string root ="/home/lyf67/Webserver/www";
+volatile sig_atomic_t stop_server=0;
+//ofstream access_file;
+int logfd=-1;
+void stop_handler(int )
+{
+
+    stop_server=1;
+
+}
 
 struct epoll
 {
@@ -33,6 +44,10 @@ size_t total;
 int status;
 chrono::steady_clock::time_point last_active;
 chrono::steady_clock::time_point start_time;
+
+string method;
+string path;
+string response_status;
 };
  epoll g_event[Max_event+1];
 int epfd;
@@ -57,6 +72,10 @@ ev->send_buf.clear();
 ev->total=0;
 ev->last_active=chrono::steady_clock::now();
 ev->start_time=chrono::steady_clock::now();
+ev->method.clear();
+ev->path.clear();
+ev->response_status.clear();
+
 }
 
 void eventadd(uint32_t event,int fd,struct epoll *ev)
@@ -84,7 +103,7 @@ void Initserver()
     setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));
     sockaddr_in addr{};
     addr.sin_family=AF_INET;
-    addr.sin_port=htons(PORT);
+    addr.sin_port=htons((uint16_t)port);
     addr.sin_addr.s_addr=htonl(INADDR_ANY);
     Bind(fd,(struct sockaddr*)&addr,sizeof(addr));
     Listen(fd,128);
@@ -102,7 +121,7 @@ eventadd(EPOLLIN,fd,&g_event[Max_event]);
 void acception(int fd,uint32_t,struct epoll *)
 {
     struct sockaddr_in clin_addr{};
-    while(1)
+    while(!stop_server)
     {
     socklen_t len=sizeof(clin_addr);
     // 非阻塞 accept 的 EAGAIN 不是致命错误。
@@ -269,13 +288,9 @@ if(it==headers.end() || it->second.empty())
 valid=false;
 
 }
-if(valid)                                                  
-{
-for( const auto& it:headers)
-{
-    cout<<it.first<<": "<<it.second<<endl;
-}
-}
+
+
+
 
 
 if(!valid)
@@ -409,12 +424,12 @@ content_type="text/plain; charset=utf-8";
             string filetype;
 if(path=="/"||path=="/index.html")
 {
-filename="/home/lyf67/Webserver/www/index.html";
+filename=root+"/index.html";
 filetype="text/html; charset=utf-8";
 }
 else if(path=="/style.css")
 {
-    filename="/home/lyf67/Webserver/www/style.css";
+    filename=root+"/style.css";
     filetype="text/css; charset=utf-8";
 }
 
@@ -466,10 +481,80 @@ content_type=filetype;
         
             string allow=path=="/echo"?"POST":"GET,HEAD";
       ev->send_buf=make_response(status,body,content_type,method=="HEAD",allow);
+ev->method=method;
+ev->path=path;
+ev->response_status=status;
+
+
 
         ev->total=0;
         ev->callback=send_client;
         eventadd(EPOLLOUT,cfd,ev);
+}
+
+void access_log(struct epoll* ev)
+{
+
+    auto now=chrono::steady_clock::now();
+auto duration=now-ev->start_time;
+
+    auto elapsed=chrono::duration_cast<chrono::milliseconds>
+    (duration).count();
+time_t current=time(nullptr);
+struct tm local{};
+
+if(localtime_r(&current,&local)==nullptr)
+
+{
+ 
+    cerr<<"connot get log time"<<endl;
+return;
+
+}
+
+stringstream line;
+line<<put_time(&local,"%Y-%m-%d %H:%M:%S")
+        <<" | "
+        <<(ev->method.empty() ? "-" : ev->method)<<" "
+        <<(ev->path.empty() ? "-" : ev->path)
+        <<" | "<<ev->response_status
+        <<" | sent="<<ev->total<<" bytes"
+        <<" | elapsed="<<elapsed<<" ms";
+
+ string text =line.str()+"\n";
+ 
+ size_t total=0;
+ while(total<text.size())
+ {
+
+ssize_t n=write(logfd,text.data()+total,text.size()-total);
+if(n>0)
+{
+    total+=(size_t)n;
+
+}
+else if(n==-1)
+{
+    if(errno==EINTR)
+    continue;
+    else
+    {
+        perror("write access.log error");
+        return;
+
+    }
+}
+
+
+else{
+
+    cerr<<"write access.log returned 0"<<endl;
+    break;
+
+}
+ }
+   
+
 }
 
 void send_client(int cfd,uint32_t,struct epoll* ev)
@@ -499,6 +584,8 @@ void send_client(int cfd,uint32_t,struct epoll* ev)
 
 
     }
+    access_log(ev);
+
     eventdel(ev);
 }
 
@@ -507,8 +594,68 @@ bool parse_args(int argc,char* argv[])
 
     if(argc>3)
     return false;
+    if(argc>=2)
+    {
 
-    
+        string value=argv[1];
+if(value.empty())
+{
+    return false;
+
+}
+int number=0;
+for(size_t i=0;i<value.size();i++)
+{
+
+    char ch=value[i];
+    if(ch>'9'||ch<'0')
+    {
+        return false;
+
+    }
+
+    int digit=ch-'0';
+    if(number>(65535-digit)/10)
+    {
+
+        return false;
+
+    }
+    number=number*10+digit;
+
+}
+if(number==0)
+{
+    return false;
+
+}
+port=number;
+
+    }
+if(argc==3)
+root=argv[2];
+
+struct stat info{};
+
+if(stat(root.c_str(),&info)==-1)
+{
+    return false;
+
+}
+
+if(!S_ISDIR(info.st_mode))
+{
+
+    return false;
+
+}
+
+while(root.size()>1&&root.back()=='/')
+root.pop_back();
+
+return true;
+
+
 }
 
 
@@ -517,15 +664,40 @@ int main(int argc,char* argv[])
 {
 if(!parse_args(argc,argv))
 return 1;
+struct sigaction action{};
 
+action.sa_flags=0;
+sigemptyset(&action.sa_mask);
+
+action.sa_handler=stop_handler;
+if(sigaction(SIGINT,&action,nullptr)==-1
+||
+sigaction(SIGTERM,&action,nullptr)==-1)
+{
+    perror("sigaction error");
+    return 1;
+
+}
 
     cout<<"WebServer starting..."<<endl;
     cout<<"port: "<<port<<endl;
     cout<<"root: "<<root<<endl;
+
+    logfd=open("/home/lyf67/Webserver/access.log",
+    O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC,0644);
+
+    if(logfd==-1)
+    {
+
+        perror("open access.log error");
+        return 1;
+
+    }
+
     struct epoll_event events[Max_event];
     epfd=Epoll_create1(0);
     Initserver();
-    while(1)
+    while(!stop_server)
     {
         int ret=epoll_wait(epfd,events,Max_event,1000);
         if(ret==-1)
@@ -535,6 +707,10 @@ return 1;
             perror("epoll_wait error");
             break;
         }
+
+        if(stop_server)
+        break;
+
 for(int i=0;i<ret;i++)
 {
     struct epoll *ev=(struct epoll*)events[i].data.ptr;
@@ -567,7 +743,8 @@ if(g_event[i].callback==hander_client)
         body,
         "text/html; charset=utf-8"
     );
-    
+    ev->response_status="408 Request Timeout";
+
     ev->total=0;
     ev->callback=send_client;
     eventadd(EPOLLOUT,ev->fd,ev);
@@ -590,6 +767,21 @@ if(idle>chrono::seconds(30))
 
         }
         
-    
+    cout<<"server stopping..."<<endl;
+for(int i=0;i<=Max_event;i++)
+{
+
+    if(g_event[i].status==1)
+    eventdel(&g_event[i]);
+}
+close(epfd);
+if(logfd!=-1)
+{
+
+    close(logfd);
+    logfd=-1;
+}
+cout<<"server stopped"<<endl;
+
     return 0;
 }
