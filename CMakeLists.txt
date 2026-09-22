@@ -29,6 +29,7 @@ target_compile_options(http_test PRIVATE -Wall
 add_test(NAME http_test COMMAND http_test)
 
 find_package(Threads REQUIRED)
+target_link_libraries(server PRIVATE Threads::Threads)
 
 add_executable(thread_pool_test
     tests/thread_pool_test.cpp
@@ -74,3 +75,30 @@ target_compile_options(notify_test PRIVATE
 
 add_test(NAME notify_test COMMAND notify_test)
 set_tests_properties(notify_test PROPERTIES TIMEOUT 10)
+
+add_executable(static_file_test tests/static_file_test.cpp src/static_file.cpp)
+
+target_include_directories(static_file_test PRIVATE ${PROJECT_SOURCE_DIR}/include)
+
+target_compile_options(static_file_test PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wconversion
+    -Wsign-conversion
+)
+
+add_test(NAME static_file_test COMMAND static_file_test)
+
+add_executable(timer_test tests/timer_test.cpp)
+
+target_compile_options(timer_test PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wconversion
+    -Wsign-conversion
+)
+
+add_test(NAME timer_test COMMAND timer_test)
+set_tests_properties(timer_test PROPERTIES TIMEOUT 10)

@@ -4,6 +4,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/server.dir/src/http.cpp.o.d"
   "CMakeFiles/server.dir/src/main.cpp.o"
   "CMakeFiles/server.dir/src/main.cpp.o.d"
+  "CMakeFiles/server.dir/src/static_file.cpp.o"
+  "CMakeFiles/server.dir/src/static_file.cpp.o.d"
   "CMakeFiles/server.dir/src/wrap.cpp.o"
   "CMakeFiles/server.dir/src/wrap.cpp.o.d"
   "server"

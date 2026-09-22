@@ -178,6 +178,32 @@ notify_test/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/notify_test.dir/build.make CMakeFiles/notify_test.dir/build
 .PHONY : notify_test/fast
 
+#=============================================================================
+# Target rules for targets named static_file_test
+
+# Build rule for target.
+static_file_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 static_file_test
+.PHONY : static_file_test
+
+# fast build rule for target.
+static_file_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/static_file_test.dir/build.make CMakeFiles/static_file_test.dir/build
+.PHONY : static_file_test/fast
+
+#=============================================================================
+# Target rules for targets named timer_test
+
+# Build rule for target.
+timer_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 timer_test
+.PHONY : timer_test
+
+# fast build rule for target.
+timer_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/timer_test.dir/build.make CMakeFiles/timer_test.dir/build
+.PHONY : timer_test/fast
+
 src/http.o: src/http.cpp.o
 .PHONY : src/http.o
 
@@ -228,6 +254,33 @@ src/main.s: src/main.cpp.s
 src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
+
+src/static_file.o: src/static_file.cpp.o
+.PHONY : src/static_file.o
+
+# target to build an object file
+src/static_file.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/src/static_file.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/static_file_test.dir/build.make CMakeFiles/static_file_test.dir/src/static_file.cpp.o
+.PHONY : src/static_file.cpp.o
+
+src/static_file.i: src/static_file.cpp.i
+.PHONY : src/static_file.i
+
+# target to preprocess a source file
+src/static_file.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/src/static_file.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/static_file_test.dir/build.make CMakeFiles/static_file_test.dir/src/static_file.cpp.i
+.PHONY : src/static_file.cpp.i
+
+src/static_file.s: src/static_file.cpp.s
+.PHONY : src/static_file.s
+
+# target to generate assembly for a file
+src/static_file.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/src/static_file.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/static_file_test.dir/build.make CMakeFiles/static_file_test.dir/src/static_file.cpp.s
+.PHONY : src/static_file.cpp.s
 
 src/wrap.o: src/wrap.cpp.o
 .PHONY : src/wrap.o
@@ -301,6 +354,30 @@ tests/notify_test.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/notify_test.dir/build.make CMakeFiles/notify_test.dir/tests/notify_test.cpp.s
 .PHONY : tests/notify_test.cpp.s
 
+tests/static_file_test.o: tests/static_file_test.cpp.o
+.PHONY : tests/static_file_test.o
+
+# target to build an object file
+tests/static_file_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/static_file_test.dir/build.make CMakeFiles/static_file_test.dir/tests/static_file_test.cpp.o
+.PHONY : tests/static_file_test.cpp.o
+
+tests/static_file_test.i: tests/static_file_test.cpp.i
+.PHONY : tests/static_file_test.i
+
+# target to preprocess a source file
+tests/static_file_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/static_file_test.dir/build.make CMakeFiles/static_file_test.dir/tests/static_file_test.cpp.i
+.PHONY : tests/static_file_test.cpp.i
+
+tests/static_file_test.s: tests/static_file_test.cpp.s
+.PHONY : tests/static_file_test.s
+
+# target to generate assembly for a file
+tests/static_file_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/static_file_test.dir/build.make CMakeFiles/static_file_test.dir/tests/static_file_test.cpp.s
+.PHONY : tests/static_file_test.cpp.s
+
 tests/thread_pool_test.o: tests/thread_pool_test.cpp.o
 .PHONY : tests/thread_pool_test.o
 
@@ -325,6 +402,30 @@ tests/thread_pool_test.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/thread_pool_test.dir/build.make CMakeFiles/thread_pool_test.dir/tests/thread_pool_test.cpp.s
 .PHONY : tests/thread_pool_test.cpp.s
 
+tests/timer_test.o: tests/timer_test.cpp.o
+.PHONY : tests/timer_test.o
+
+# target to build an object file
+tests/timer_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/timer_test.dir/build.make CMakeFiles/timer_test.dir/tests/timer_test.cpp.o
+.PHONY : tests/timer_test.cpp.o
+
+tests/timer_test.i: tests/timer_test.cpp.i
+.PHONY : tests/timer_test.i
+
+# target to preprocess a source file
+tests/timer_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/timer_test.dir/build.make CMakeFiles/timer_test.dir/tests/timer_test.cpp.i
+.PHONY : tests/timer_test.cpp.i
+
+tests/timer_test.s: tests/timer_test.cpp.s
+.PHONY : tests/timer_test.s
+
+# target to generate assembly for a file
+tests/timer_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/timer_test.dir/build.make CMakeFiles/timer_test.dir/tests/timer_test.cpp.s
+.PHONY : tests/timer_test.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -337,13 +438,18 @@ help:
 	@echo "... http_test"
 	@echo "... notify_test"
 	@echo "... server"
+	@echo "... static_file_test"
 	@echo "... thread_pool_test"
+	@echo "... timer_test"
 	@echo "... src/http.o"
 	@echo "... src/http.i"
 	@echo "... src/http.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/static_file.o"
+	@echo "... src/static_file.i"
+	@echo "... src/static_file.s"
 	@echo "... src/wrap.o"
 	@echo "... src/wrap.i"
 	@echo "... src/wrap.s"
@@ -353,9 +459,15 @@ help:
 	@echo "... tests/notify_test.o"
 	@echo "... tests/notify_test.i"
 	@echo "... tests/notify_test.s"
+	@echo "... tests/static_file_test.o"
+	@echo "... tests/static_file_test.i"
+	@echo "... tests/static_file_test.s"
 	@echo "... tests/thread_pool_test.o"
 	@echo "... tests/thread_pool_test.i"
 	@echo "... tests/thread_pool_test.s"
+	@echo "... tests/timer_test.o"
+	@echo "... tests/timer_test.i"
+	@echo "... tests/timer_test.s"
 .PHONY : help
 
 

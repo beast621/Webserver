@@ -16,8 +16,17 @@
 #include<sys/stat.h>
 #include<chrono>
 #include<signal.h>
+#include<cstdint>
 #include<ctime>
 #include<iomanip>
+#include<sys/eventfd.h>
+#include<queue>
+#include<mutex>
+#include<utility>
+#include<sys/timerfd.h>
+#include<memory>
+#include"thread_pool.h"
+#include"static_file.h"
 using namespace std;
 #define Max_event 1024
 int port=9527;
@@ -44,13 +53,35 @@ size_t total;
 int status;
 chrono::steady_clock::time_point last_active;
 chrono::steady_clock::time_point start_time;
-
+uint64_t generation;
 string method;
 string path;
 string response_status;
 };
+
+struct WorkResult
+{
+    int index;
+    uint64_t generation;
+    string response;
+    string method;
+    string path;
+    string response_status;
+
+};
+
+
+
  epoll g_event[Max_event+1];
 int epfd;
+uint64_t next_generation=1;
+unique_ptr<Threadpool> work_pool;
+queue<WorkResult> work_results;
+mutex result_mtx;
+int notifyfd=-1;
+size_t pending_tasks=0;
+
+
 void acception(int fd,uint32_t event,struct epoll *ev);
 void hander_client(int cfd,uint32_t event,struct epoll *ev);
 void send_client(int cfd,uint32_t event,struct epoll *ev);
@@ -61,6 +92,24 @@ bool set_nonblock(int fd)
     int flags=fcntl(fd,F_GETFL,0);
     return flags!=-1 && fcntl(fd,F_SETFL,flags|O_NONBLOCK)!=-1;
 }
+
+
+bool result_is_current(const WorkResult& result)
+{
+
+    if(result.index<0||result.index>=Max_event)
+    return false;
+
+    struct epoll*ev=&g_event[result.index];
+    if(ev->status==0)
+    return false;
+
+    return ev->generation==result.generation;
+    
+}
+
+
+
 void eventset(int fd,struct epoll *ev,void(*callback)(int ,uint32_t ,struct epoll*),struct epoll* arg)
 {
 ev->fd=fd;
@@ -75,6 +124,10 @@ ev->start_time=chrono::steady_clock::now();
 ev->method.clear();
 ev->path.clear();
 ev->response_status.clear();
+ev->generation=next_generation;
+next_generation++;
+if(next_generation==0)
+next_generation=1;
 
 }
 
@@ -180,8 +233,163 @@ void eventdel(struct epoll* ev)
 
 
 
+void handle_results(int fd,uint32_t,struct epoll*ev)
+{
+
+    while(1)
+    {
+uint64_t value;
+        ssize_t n=read(fd,&value,sizeof(value));
+        if(n==-1&&errno==EINTR)
+        continue;
+        if(n==-1&&errno==EAGAIN)
+        break;
+        if(n==(ssize_t)sizeof(value))
+        continue;
+
+        perror("read eventfd error");
+        return;
+
+    }
+
+    queue<WorkResult>ready;
+    {
+        lock_guard<mutex> lock(result_mtx);
+        ready.swap(work_results);
+
+    }
+while(!ready.empty())
+{
+
+    WorkResult result=move(ready.front());
+    ready.pop();
+    if(pending_tasks>0)
+    pending_tasks--;
+
+    if(!result_is_current(result))
+    continue;
+
+    ev=&g_event[result.index];
+
+    if(ev->callback!=nullptr)
+    continue;
+
+    ev->send_buf=move(result.response);
+    ev->method=move(result.method);
+    ev->path=move(result.path);
+    ev->response_status=move(result.response_status);
+    ev->total=0;
+    ev->last_active=chrono::steady_clock::now();
+    ev->callback=send_client;
+    eventadd(EPOLLOUT,ev->fd,ev);
+
+}
+    
+}
 
 
+
+
+bool submit_work(
+    struct epoll*ev,
+    const string& body,
+    const string& method,
+    const string& path,
+    const string& filename="",
+    const string& filetype="text/plain; charset=utf-8"
+
+)
+{
+if(pending_tasks>=32)
+return false;
+
+int index=(int)(ev-g_event);
+uint64_t generatation=ev->generation;
+
+bool ok=work_pool->add_task(
+    [index,generatation,body,method,path,filename,filetype]()
+    {
+        WorkResult result;
+        result.generation=generatation;
+        result.index=index;
+        result.method=method;
+        result.path=path;
+        
+
+        try
+{
+    result.response_status="200 ok";
+string response_body=body;
+string content_type=filetype;
+if(!filename.empty())
+{
+    int code=read_static_file(filename,response_body);
+
+    if(code==404)
+    {
+       result.response_status="404 Not Found";
+            response_body="<h1>Not Found</h1>";
+            content_type="text/html; charset=utf-8";
+    }
+
+    else if(code!=200)
+    {
+ result.response_status="500 Internal Server Error";
+            response_body="<h1>Read File Error</h1>";
+            content_type="text/html; charset=utf-8";
+    }
+}
+
+result.response=make_response(
+    result.response_status,
+    response_body,
+    content_type,
+    method=="HEAD"
+);
+
+}
+catch(const exception&)
+{
+    result.response_status="500 Internal Server Error",
+    result.response=make_response(result.response_status,
+    "<h1>Internal Server Error</h1>",
+"text/html; charset=utf-8",
+method=="HEAD");
+}
+
+{
+    lock_guard<mutex> lock(result_mtx);
+    work_results.push(move(result));
+
+}
+
+uint64_t value=1;
+while(1)
+{
+
+    ssize_t n=write(notifyfd,&value,sizeof(value));
+if(n==-1&&errno==EINTR)
+continue;
+if(n==-1&&errno==EAGAIN)
+break;
+if(n==(ssize_t)sizeof(value))
+break;
+
+perror("write eventfd error");
+break;
+
+}
+    }
+);
+if(!ok)
+return false;
+pending_tasks++;
+
+ev->callback=nullptr;
+eventadd(0,ev->fd,ev);
+return true;
+
+}
 
 
 
@@ -403,9 +611,17 @@ else
 }
 
 }
-status="200 OK";
+
 body=message.substr(body_start,content_length);
-content_type="text/plain; charset=utf-8";
+if(submit_work(ev,body,method,path))
+{
+    return;
+}
+status="503 Service Unavailable";
+body="<h1>Server Busy</h1>";
+content_type="text/html; charset=utf-8";
+
+
 }
 
 }
@@ -433,50 +649,35 @@ else if(path=="/style.css")
     filetype="text/css; charset=utf-8";
 }
 
+else if(path=="/app.js")
+{
 
+    filename=root+"/app.js";
+    filetype="text/javascript; charset=utf-8";
+
+}
 if(filename.empty())
 {
     status="404 Not Found";
     body="<h1>Not Found</h1>";
 }
+
 else
 {
-    int filefd=open(filename.c_str(),O_RDONLY);
-    if(filefd==-1)
+
+    if(submit_work(ev,"",method,path,filename,filetype))
     {
-        status="404 Not Found";
-    body="<h1>Not Found</h1>";
+
+        return;
+
     }
 
-    else{
-        status="200 OK";
-        char filebuf[BUFSIZ];
-        while(1)
-        {
-
-            ssize_t filen=read(filefd,filebuf,sizeof(filebuf));
-            if(filen>0)
-            {
-                body.append(filebuf,(size_t)filen);
-            }
-            else if(filen<0)
-            {
-if(errno==EINTR)
-continue;
-status="500 Internal Server Error";
-body="<h1>Read File Error</h1>";
-break;
-
-            }
-            else{
-break;
-            }
-        }
-        close(filefd);
-    }
+    status="503 Server Unavailable";
+    body="<h1>Server Busy</h1>";
+    content_type="text/html; charset=utf-8";
 }
-if(status=="200 OK")
-content_type=filetype;
+
+
         }
         
             string allow=path=="/echo"?"POST":"GET,HEAD";
@@ -659,6 +860,118 @@ return true;
 }
 
 
+void check_timeouts()
+{
+
+    auto now=chrono::steady_clock::now();
+for(int i=0;i<Max_event;i++)
+{
+
+    struct epoll*ev=&g_event[i];
+
+
+    if(ev->status==0)
+    continue;
+    if(ev->callback==hander_client)
+    {
+        auto elapsed=now-ev->start_time;
+        if(elapsed>=chrono::seconds(10))
+        {
+        cout<<"request timeout"<<endl;
+        string body="<h1>408 Request Timeout</h1>";
+        ev->send_buf=make_response("408 Request Timeout",
+        body,
+    "text/html; charset=utf-8");
+
+    ev->response_status="408 Request Timeout";
+    ev->callback=send_client;
+    ev->total=0;
+    ev->last_active=chrono::steady_clock::now();
+
+    eventadd(EPOLLOUT,ev->fd,ev);
+    continue;
+        }
+    }
+auto idle=now-ev->last_active;
+if(idle>=chrono::seconds(30))
+{
+    cout<<"client timeout";
+    eventdel(ev);
+
+}
+}
+
+}
+
+
+void handle_timer(int fd,uint32_t,struct epoll*)
+{
+
+    bool expired=false;
+
+    while(1)
+    {
+
+        uint64_t count;
+        ssize_t n=read(fd,&count,sizeof(count));
+        if(n==(ssize_t)sizeof(count))
+        {
+            expired=true;
+            continue;
+        }
+
+        if(n==-1&&errno==EINTR)
+        {
+            continue;
+        }
+
+        if(n==-1&&errno==EAGAIN)
+        break;
+
+        cerr<<"read timerfd error"<<endl;
+        stop_server=1;
+        return;
+
+    }
+
+    if(expired)
+    check_timeouts();
+}
+
+
+bool init_timer(struct epoll*ev)
+{
+
+    int fd=timerfd_create(CLOCK_MONOTONIC,
+    TFD_CLOEXEC|TFD_NONBLOCK);
+
+    if(fd==-1)
+    {
+        perror("timerfd_create error");
+        return false;
+
+    }
+
+    struct itimerspec value{};
+    value.it_interval.tv_sec=1;
+    value.it_value.tv_sec=1;
+
+if(timerfd_settime(fd,0,&value,nullptr)==-1)
+{
+    perror("timerfd_settime error");
+    close(fd);
+    
+    return false;
+
+}
+
+eventset(fd,ev,handle_timer,ev);
+eventadd(EPOLLIN,fd,ev);
+return ev->status==1;
+
+}
+
+
 int main(int argc,char* argv[])
 
 {
@@ -697,9 +1010,70 @@ sigaction(SIGTERM,&action,nullptr)==-1)
     struct epoll_event events[Max_event];
     epfd=Epoll_create1(0);
     Initserver();
+
+    notifyfd=eventfd(0,EFD_NONBLOCK|EFD_CLOEXEC);
+
+    if(notifyfd==-1)
+    {
+        perror("eventfd error");
+        eventdel(&g_event[Max_event]);
+
+        close(epfd);
+        close(logfd);
+        return 1;
+
+    }
+struct epoll notifyfd_event;
+eventset(notifyfd,&notifyfd_event,handle_results,&notifyfd_event);
+eventadd(EPOLLIN,notifyfd,&notifyfd_event);
+if(notifyfd_event.status==0)
+{
+    perror("notifyfd add error");
+    eventdel(&g_event[Max_event]);
+
+    close(epfd);
+    close(logfd);
+    return 1;
+
+    
+}
+
+try
+{
+    work_pool=make_unique<Threadpool>(4);
+
+}
+catch(const std::exception& e)
+{
+    cerr<<"create thread pool failed" << e.what() <<endl;
+    eventdel(&notifyfd_event);
+    eventdel(&g_event[Max_event]);
+    close(epfd);
+    close(logfd);
+    return 1;
+
+}
+
+struct epoll timer_event{};
+
+if(!init_timer(&timer_event))
+{
+
+    work_pool.reset();
+
+    eventdel(&notifyfd_event);
+    eventdel(&g_event[Max_event]);
+    //close(notifyfd);
+    close(epfd);
+    close(logfd);
+    return 1;
+
+
+}
+
     while(!stop_server)
     {
-        int ret=epoll_wait(epfd,events,Max_event,1000);
+        int ret=epoll_wait(epfd,events,Max_event,-1);
         if(ret==-1)
         {
             if(errno==EINTR)
@@ -716,64 +1090,34 @@ for(int i=0;i<ret;i++)
     struct epoll *ev=(struct epoll*)events[i].data.ptr;
     if(events[i].events&(EPOLLERR|EPOLLHUP))
     {
+        if(ev==&timer_event)
+        stop_server=1;
+
         eventdel(ev);
         continue;
     }
     if(ev->status==1 && ev->callback)
         ev->callback(ev->fd,events[i].events,ev->arg);
 }
-auto now=chrono::steady_clock::now();
-for(int i=0;i<Max_event;i++)
-{
-    if(g_event[i].status==0)
-    continue;
-
-if(g_event[i].callback==hander_client)
-{
-    auto esp=now-g_event[i].start_time;
-    if(esp>=chrono::seconds(10))
-{
-    cout<<"request timeout"<<endl;
-
-    struct epoll* ev=&g_event[i];
-    string body="<h1>408 Request Timeout</h1>";
-
-    ev->send_buf=make_response(
-        "408 Request Timeout",
-        body,
-        "text/html; charset=utf-8"
-    );
-    ev->response_status="408 Request Timeout";
-
-    ev->total=0;
-    ev->callback=send_client;
-    eventadd(EPOLLOUT,ev->fd,ev);
-
-    continue;
-}
-}
-
-auto idle=now-g_event[i].last_active;
-//auto esp=now-g_event[i].last_active;
-//auto seconds=chrono::duration_cast<chrono::seconds>(esp).count();
-
-if(idle>chrono::seconds(30))
-{
-    cout<<"client timeout"<<endl;
-    eventdel(&g_event[i]);
-}
-
-}
 
         }
         
     cout<<"server stopping..."<<endl;
+    work_pool.reset();
+
 for(int i=0;i<=Max_event;i++)
 {
 
     if(g_event[i].status==1)
     eventdel(&g_event[i]);
 }
+if(notifyfd_event.status==1)
+eventdel(&notifyfd_event);
+notifyfd=-1;
+if(timer_event.status==1)
+eventdel(&timer_event);
+
+
 close(epfd);
 if(logfd!=-1)
 {

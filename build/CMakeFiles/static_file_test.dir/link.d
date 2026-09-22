@@ -1,11 +1,9 @@
-server: \
+static_file_test: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o \
   /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o \
-  CMakeFiles/server.dir/src/http.cpp.o \
-  CMakeFiles/server.dir/src/main.cpp.o \
-  CMakeFiles/server.dir/src/static_file.cpp.o \
-  CMakeFiles/server.dir/src/wrap.cpp.o \
+  CMakeFiles/static_file_test.dir/tests/static_file_test.cpp.o \
+  CMakeFiles/static_file_test.dir/src/static_file.cpp.o \
   /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libm.so \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libm.so \
@@ -41,13 +39,9 @@ server: \
 
 /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o:
 
-CMakeFiles/server.dir/src/http.cpp.o:
+CMakeFiles/static_file_test.dir/tests/static_file_test.cpp.o:
 
-CMakeFiles/server.dir/src/main.cpp.o:
-
-CMakeFiles/server.dir/src/static_file.cpp.o:
-
-CMakeFiles/server.dir/src/wrap.cpp.o:
+CMakeFiles/static_file_test.dir/src/static_file.cpp.o:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so:
 

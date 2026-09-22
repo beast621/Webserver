@@ -8,11 +8,9 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/lyf67/Webserver/src/http.cpp" "CMakeFiles/server.dir/src/http.cpp.o" "gcc" "CMakeFiles/server.dir/src/http.cpp.o.d"
-  "/home/lyf67/Webserver/src/main.cpp" "CMakeFiles/server.dir/src/main.cpp.o" "gcc" "CMakeFiles/server.dir/src/main.cpp.o.d"
-  "/home/lyf67/Webserver/src/static_file.cpp" "CMakeFiles/server.dir/src/static_file.cpp.o" "gcc" "CMakeFiles/server.dir/src/static_file.cpp.o.d"
-  "/home/lyf67/Webserver/src/wrap.cpp" "CMakeFiles/server.dir/src/wrap.cpp.o" "gcc" "CMakeFiles/server.dir/src/wrap.cpp.o.d"
-  "" "server" "gcc" "CMakeFiles/server.dir/link.d"
+  "/home/lyf67/Webserver/src/static_file.cpp" "CMakeFiles/static_file_test.dir/src/static_file.cpp.o" "gcc" "CMakeFiles/static_file_test.dir/src/static_file.cpp.o.d"
+  "/home/lyf67/Webserver/tests/static_file_test.cpp" "CMakeFiles/static_file_test.dir/tests/static_file_test.cpp.o" "gcc" "CMakeFiles/static_file_test.dir/tests/static_file_test.cpp.o.d"
+  "" "static_file_test" "gcc" "CMakeFiles/static_file_test.dir/link.d"
   )
 
 # Targets to which this target links which contain Fortran sources.
