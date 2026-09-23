@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/timer_test.dir/link.d CMakeFiles/timer_test.dir/tests/timer_test.cpp.o -o timer_test

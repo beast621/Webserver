@@ -65,7 +65,7 @@ uint64_t count=0;
 continue;
     }
 
-    if(n==-1&&EAGAIN)
+    if(n==-1&&errno==EAGAIN)
     break;
 
     if(n==(ssize_t)sizeof(count))
@@ -113,6 +113,7 @@ int main()
     if(epfd==-1)
     {
         perror("epoll_create error");
+        close(fd);
         return 1;
 
     }

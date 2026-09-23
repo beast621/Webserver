@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/server.dir/link.d CMakeFiles/server.dir/src/http.cpp.o CMakeFiles/server.dir/src/main.cpp.o CMakeFiles/server.dir/src/static_file.cpp.o CMakeFiles/server.dir/src/wrap.cpp.o -o server

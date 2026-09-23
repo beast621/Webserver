@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/lyf67/Webserver/build-release/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -123,7 +123,15 @@ return 200;
 
 
 
+bool should_keep_alive(
+    const string& version,
+    const map<string,string>& headers
+)
+{
 
+auto it=headers.find("connection");
+if(it!=)
+}
 
 
 

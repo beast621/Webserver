@@ -22,3 +22,9 @@ std::string make_response(
     bool head=false,
     const std::string& allow="GET, HEAD"
 );
+
+bool should_keep_alive(
+    const std::string& version,
+    const std::map<std::string,std::string>& headers
+);
+

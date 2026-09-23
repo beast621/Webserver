@@ -80,6 +80,11 @@ queue<WorkResult> work_results;
 mutex result_mtx;
 int notifyfd=-1;
 size_t pending_tasks=0;
+auto server_start=chrono::steady_clock::now();
+uint64_t completed_responses=0;
+uint64_t server_error_responses=0;
+uint64_t sent_bytes=0;
+
 
 
 void acception(int fd,uint32_t event,struct epoll *ev);
@@ -392,8 +397,33 @@ return true;
 }
 
 
+string make_status_body()
+{
+    int active=0;
+    for(int i=0;i<Max_event;i++)
+    {
 
+        if(g_event[i].status==1)
+        active++;
 
+    }
+auto now=chrono::steady_clock::now();
+
+auto es=now-server_start;
+auto seconds=chrono::duration_cast<chrono::seconds>(es).count();
+stringstream ss;
+
+ss<<"{\n"
+  <<"  \"active_connections\": "<<active<<",\n"
+  <<"  \"pending_tasks\": "<<pending_tasks<<",\n"
+  <<"  \"uptime_seconds\": "<<seconds<<",\n"
+  <<"  \"completed_responses\": "<<completed_responses<<",\n"
+  <<"  \"server_error_responses\": "<<server_error_responses<<",\n"
+  <<"  \"sent_bytes\": "<<sent_bytes<<"\n"
+  <<"}\n";
+      return ss.str();
+
+}
 void hander_client(int cfd,uint32_t,struct epoll* ev)
 {
 
@@ -508,6 +538,24 @@ if(!valid)
     
 }
 
+else if(path=="/status")
+{
+
+    if(method!="GET"&&method!="HEAD")
+    {
+        status="405 Method Not Allowed";
+        body="<h1> Method Not Allowed</h1>";
+
+    }
+    else
+    {
+        status="200 OK";
+body=make_status_body();
+
+content_type="application/json; charset=utf-8";
+
+    }
+}
 
 else if(path=="/echo")
 {
@@ -781,9 +829,17 @@ void send_client(int cfd,uint32_t,struct epoll* ev)
             return;
         }
         ev->total+=(size_t)ret;
+        sent_bytes+=(uint64_t)ret;
         ev->last_active=chrono::steady_clock::now();
 
 
+    }
+
+    completed_responses++;
+
+    if(!ev->response_status.empty()&&ev->response_status[0]=='5')
+    {
+        server_error_responses++;
     }
     access_log(ev);
 
@@ -960,7 +1016,7 @@ if(timerfd_settime(fd,0,&value,nullptr)==-1)
 {
     perror("timerfd_settime error");
     close(fd);
-    
+
     return false;
 
 }

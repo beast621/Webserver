@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/http_test.dir/link.d CMakeFiles/http_test.dir/tests/http_test.cpp.o CMakeFiles/http_test.dir/src/http.cpp.o -o http_test

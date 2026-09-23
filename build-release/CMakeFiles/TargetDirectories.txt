@@ -1,0 +1,9 @@
+/home/lyf67/Webserver/build-release/CMakeFiles/server.dir
+/home/lyf67/Webserver/build-release/CMakeFiles/http_test.dir
+/home/lyf67/Webserver/build-release/CMakeFiles/thread_pool_test.dir
+/home/lyf67/Webserver/build-release/CMakeFiles/notify_test.dir
+/home/lyf67/Webserver/build-release/CMakeFiles/static_file_test.dir
+/home/lyf67/Webserver/build-release/CMakeFiles/timer_test.dir
+/home/lyf67/Webserver/build-release/CMakeFiles/test.dir
+/home/lyf67/Webserver/build-release/CMakeFiles/edit_cache.dir
+/home/lyf67/Webserver/build-release/CMakeFiles/rebuild_cache.dir
